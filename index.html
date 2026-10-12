@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>懇親会 申し込みサポート</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1f3a5f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+:root{--navy:#1f3a5f;--blue:#e6f0fa;--line:#b9cde3;--ok:#0b6b3a;--warn:#8a4b00}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:#1a1a1a;font:18px/1.7 -apple-system,"Hiragino Sans","Yu Gothic",Meiryo,sans-serif}
+main{max-width:640px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:28px;line-height:1.4;color:var(--navy);margin:8px 0 16px}
+h2{font-size:22px;color:var(--navy);margin:0 0 12px}
+.card{background:var(--blue);border:2px solid var(--line);border-radius:16px;padding:16px;margin:16px 0}
+.btn{display:block;width:100%;min-height:60px;margin:14px 0;padding:14px;border-radius:14px;border:3px solid var(--navy);background:#fff;color:var(--navy);font:bold 20px/1.4 inherit;text-align:center;text-decoration:none;cursor:pointer}
+.btn.main{background:var(--navy);color:#fff}
+.btn.hot{background:#b3261e;border-color:#7d1a14;color:#fff;font-size:22px}
+.btn:focus-visible,input:focus-visible,textarea:focus-visible{outline:4px solid #f5a300}
+dl{margin:0}dt{font-weight:bold;color:var(--navy);margin-top:8px}dd{margin:0}
+.count{font-size:30px;font-weight:bold;text-align:center;color:var(--navy)}
+.note{border-left:6px solid var(--warn);background:#fff7e8;padding:10px 12px;border-radius:8px;margin:12px 0}
+.ok{border-left-color:var(--ok);background:#eaf7ef}
+.steps{display:flex;gap:6px;margin:8px 0 16px}.steps i{flex:1;height:12px;border-radius:6px;background:#d5dde6}.steps i.on{background:var(--navy)}
+.pre{background:#fff;border:2px solid var(--line);border-radius:12px;padding:12px;white-space:pre-wrap;word-break:break-all}
+label{display:block;font-weight:bold;margin-top:12px}
+input[type=text],input[type=tel],textarea{width:100%;font:inherit;padding:12px;border:2px solid #6b86a6;border-radius:10px}
+textarea{min-height:200px}
+.chk{display:flex;gap:12px;align-items:flex-start;font-weight:bold}.chk input{width:32px;height:32px;flex:none}
+dialog{max-width:600px;width:92%;border:3px solid var(--navy);border-radius:16px;font-size:18px}
+[hidden]{display:none!important}
+.ext{font-size:16px;font-weight:normal;display:block}
+</style>
+</head>
+<body><main>
+
+<!-- ホーム -->
+<section id="home">
+  <h1 id="evName"></h1>
+  <div class="card"><div id="stateText" style="font-weight:bold;text-align:center"></div><div class="count" id="count"></div>
+  <p style="font-size:16px;margin:8px 0 0">※お使いの端末の時計をもとに表示しています。</p></div>
+  <div class="card"><dl id="info"></dl></div>
+  <button class="btn main" id="goGuide"></button>
+  <button class="btn" data-go="venue">会場・アクセスを見る</button>
+  <button class="btn" data-go="mailinfo">申し込み先メールを確認</button>
+  <div class="note">申し込みを代行するサイトではありません。実際の申し込みは、あなたがメールを送信することで行います。受付開始後でも定員に達している場合があります。</div>
+</section>
+
+<!-- 手順ガイド -->
+<section id="guide" hidden>
+  <h2 id="stepTitle"></h2>
+  <div class="steps" id="bar"></div>
+  <div id="stepBody"></div>
+</section>
+
+<!-- 会場 -->
+<section id="venue" hidden>
+  <h2>会場・アクセス</h2>
+  <div class="card"><b id="vName"></b><br><span id="vAddr"></span></div>
+  <a class="btn main" id="qrLink" target="_blank" rel="noopener">紙面の会場アクセスを開く<span class="ext">※別のサイト（Google）へ移動します</span></a>
+  <a class="btn" id="mapLink" target="_blank" rel="noopener">Googleマップで会場住所を検索する<span class="ext">※別のサイト（Google）へ移動します</span></a>
+  <p style="font-size:16px">上のふたつは別のリンクです。地図検索の結果は、紙面のQRコードと同じとは限りません。</p>
+  <button class="btn" data-go="home">ホームへ戻る</button>
+</section>
+
+<!-- メール確認 -->
+<section id="mailinfo" hidden>
+  <h2>申し込み先メール</h2>
+  <div class="card"><b id="mAddr" style="word-break:break-all"></b></div>
+  <p>紙面のQRコードを読み取ると、上のメールアドレスでした。</p>
+  <div id="mailQr"></div>
+  <button class="btn main" data-go="guide">申し込み手順へ</button>
+  <button class="btn" data-go="home">ホームへ戻る</button>
+</section>
+
+<dialog id="dlg">
+  <h2>メールを作成します</h2>
+  <p>メールアプリが開きます。<b>まだ送信されません。</b>内容を確認し、メールアプリの送信ボタンを押してください。</p>
+  <div id="dlgWarn"></div>
+  <button class="btn main" id="dlgOk">メールアプリを開く</button>
+  <button class="btn" id="dlgNo">やめる</button>
+</dialog>
+
+</main>
+<script src="config.js"></script>
+<script>
+const C=CONFIG, $=id=>document.getElementById(id);
+const OPEN=new Date(C.OPEN_AT).getTime();
+const S={step:1,name:C.DEFAULT_NAME,phone:C.DEFAULT_PHONE,bodyEdited:false,body:"",sent:false,save:false};
+try{const t=localStorage.getItem("ikou_save");if(t){const o=JSON.parse(t);S.name=o.n||S.name;S.phone=o.p||S.phone;S.save=true}}catch(e){}
+const isOpen=()=>Date.now()>=OPEN;
+const subject=()=>`${C.SUBJECT_PREFIX}・${S.name}・${S.phone}`;
+const defBody=()=>`一般社団法人愛光流 事務局 御中\n\n「${C.EVENT_NAME}」への参加を申し込みいたします。\n\n氏名：${S.name}\n連絡先電話番号：${S.phone}\n\nよろしくお願いいたします。`;
+const body=()=>S.bodyEdited?S.body:defBody();
+const mailto=()=>`mailto:${C.MAIL_TO}?subject=${encodeURIComponent(subject())}&body=${encodeURIComponent(body().replace(/\r?\n/g,"\r\n"))}`;
+const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+// 画面切替
+function show(id){["home","guide","venue","mailinfo"].forEach(x=>$(x).hidden=x!==id);window.scrollTo(0,0);if(id==="guide")renderStep();tick();}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-go]");if(b)show(b.dataset.go)});
+
+// ホーム表示
+$("evName").textContent=C.EVENT_NAME;
+$("info").innerHTML=[["開催日",C.EVENT_DATE],["受付開始",C.OPEN_TEXT],["会場",C.VENUE],["講座料金",C.FEE]].map(([a,b])=>`<dt>${a}</dt><dd>${b}</dd>`).join("");
+$("vName").textContent=C.VENUE;$("vAddr").textContent="〒 "+C.ADDRESS;
+$("mAddr").textContent=C.MAIL_TO;
+$("qrLink").href=C.VENUE_ACCESS_QR_URL;
+$("mapLink").href="https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(C.ADDRESS+" "+C.VENUE);
+if(C.MAIL_QR_IMAGE_PATH)$("mailQr").innerHTML=`<img src="${esc(C.MAIL_QR_IMAGE_PATH)}" alt="申し込みメールのQRコード" style="max-width:100%" onerror="this.replaceWith('画像を読み込めませんでした。上のメールアドレスをご利用ください。')">`;
+
+// カウントダウン
+let timer=null;
+function tick(){
+  const left=OPEN-Date.now();
+  if(left>0){
+    const d=Math.floor(left/864e5),h=Math.floor(left%864e5/36e5),m=Math.floor(left%36e5/6e4),s=Math.floor(left%6e4/1e3);
+    $("stateText").textContent="申し込み開始まで（まだ受付開始前です）";
+    $("count").textContent=`${d}日 ${h}時間 ${m}分 ${s}秒`;
+    $("goGuide").textContent="申し込みの準備をする";$("goGuide").className="btn main";
+  }else{
+    $("stateText").textContent="受付開始時刻を過ぎました";
+    $("count").textContent="定員に達している場合があります";
+    $("goGuide").textContent="メールを作成する（手順へ）";$("goGuide").className="btn hot";
+    stop();if(!$("guide").hidden)renderStep();
+  }
+}
+function start(){if(!timer&&!isOpen())timer=setInterval(tick,1000)}
+function stop(){clearInterval(timer);timer=null}
+document.addEventListener("visibilitychange",()=>{document.hidden?stop():(tick(),start())});
+$("goGuide").onclick=()=>show("guide");
+tick();start();
+
+// 手順ガイド
+const titles=["申し込み情報を確認する","申し込み開始時刻を確認する","メールの内容を確認する","メールを送信する","送信後の確認"];
+function next(label,n){return `<button class="btn main" onclick="S.step=${n};renderStep()">${label}</button>`}
+function renderStep(){
+  const n=S.step;$("stepTitle").textContent=`STEP ${n}／5　${titles[n-1]}`;
+  $("bar").innerHTML=[1,2,3,4,5].map(i=>`<i class="${i<=n?"on":""}"></i>`).join("");
+  let h="";
+  if(n===1){
+    h=`<div class="card"><p>イベント名：<b>${C.EVENT_NAME}</b></p>
+    <label for="nm">氏名</label><input id="nm" type="text" autocomplete="name" value="${esc(S.name)}">
+    <label for="ph">連絡先電話番号（数字のみ）</label><input id="ph" type="tel" inputmode="numeric" pattern="[0-9]*" value="${esc(S.phone)}">
+    <label class="chk" style="margin-top:16px"><input type="checkbox" id="sv" ${S.save?"checked":""}>この端末に氏名・電話番号を保存する（任意）</label>
+    <p style="font-size:16px">チェックしない限り、どこにも保存・送信されません。</p></div>
+    <button class="btn main" id="ok1">内容を確認しました</button>
+    <button class="btn" data-go="home">ホームへ戻る</button>`;
+  }
+  if(n===2){
+    h=isOpen()?`<div class="note ok"><b>申し込み受付開始時刻になりました。メールの内容を確認して、送信してください。</b></div>
+      <div class="note">定員（${C.CAPACITY}）に達している場合があります。受付時間：${C.HOURS}。受付時間外の送信については、事務局の案内をご確認ください。</div>`
+    :`<div class="note"><b>まだ申し込み受付は始まっていません。メールの準備はできます。10月16日（金）午前10時以降に送信してください。</b></div>
+      <p>受付開始：${C.OPEN_TEXT}</p><p>残り：<b id="c2"></b></p>`;
+    h+=`<p style="font-size:16px">※端末の時計で判定しています。開始時刻を過ぎても、受付や空きを保証するものではありません。</p>`+next("次へ",3);
+  }
+  if(n===3){
+    const bad=(!S.name||!S.phone||!subject().includes(S.name)||!subject().includes(S.phone));
+    h=`<p>宛先</p><div class="pre">${C.MAIL_TO}</div><p>件名</p><div class="pre">${esc(subject())}</div>
+    <label for="bd">本文（必要なら直せます）</label><textarea id="bd">${esc(body())}</textarea>
+    ${bad?`<div class="note"><b>氏名または電話番号が空です。STEP 1に戻って入力してください。</b></div>`:""}
+    <button class="btn ${isOpen()?"hot":"main"}" id="mk">${isOpen()?"メールを作成する":"メールを作成する（下書きの準備）"}</button>
+    ${isOpen()?"":`<div class="note">受付開始前です。メールは準備だけにして、送信は開始後にしてください。</div>`}
+    <button class="btn" onclick="S.step=1;renderStep()">STEP 1に戻る</button>`;
+  }
+  if(n===4){
+    h=`<div class="card"><ol><li>メールアプリが開いたら、宛先・件名・本文を見ます。</li><li>間違いがなければ、<b>メールアプリの送信ボタン</b>を押します。</li><li>この画面に戻り、次へ進みます。</li></ol></div>
+    <div class="note"><b>メールアプリが開かないとき：</b>メールアプリが設定されていない可能性があります。下のボタンで内容をコピーし、お使いのメールに貼り付けて、宛先 ${C.MAIL_TO} へ送ってください。</div>
+    <button class="btn" id="cp">宛先・件名・本文をコピーする</button><div id="cpMsg"></div>
+    <button class="btn" id="mk">もう一度メールを作成する</button>`+next("メールアプリで送信したら次へ",5);
+  }
+  if(n===5){
+    h=`<div class="card"><label class="chk"><input type="checkbox" id="sd" ${S.sent?"checked":""}>メールアプリで送信ボタンを押しました</label></div><div id="sdMsg"></div>
+    <div class="note">このチェックは自己申告の記録です。送信の証明ではありません。</div>
+    <button class="btn" data-go="home">ホームへ戻る</button>`;
+  }
+  $("stepBody").innerHTML=h;
+  if(n===1)$("ok1").onclick=()=>{S.name=$("nm").value.trim();S.phone=$("ph").value.replace(/[^0-9]/g,"");S.save=$("sv").checked;
+    try{S.save?localStorage.setItem("ikou_save",JSON.stringify({n:S.name,p:S.phone})):localStorage.removeItem("ikou_save")}catch(e){}
+    S.step=2;renderStep()};
+  if(n===3){$("bd").oninput=e=>{S.bodyEdited=true;S.body=e.target.value};$("mk").onclick=confirmMail}
+  if(n===4){$("mk").onclick=confirmMail;$("cp").onclick=copyAll}
+  if(n===5){const f=()=>$("sdMsg").innerHTML=S.sent?`<div class="note ok"><b>送信したことを記録しました。受付が完了したかどうかは、このサイトでは確認できません。事務局からの返信や受付確認をご確認ください。</b></div>`:"";
+    $("sd").onchange=e=>{S.sent=e.target.checked;f()};f()}
+  if(n===2&&!isOpen()){const u=()=>{if($("c2"))$("c2").textContent=$("count").textContent;else clearInterval(i)},i=setInterval(u,1000);u()}
+}
+function confirmMail(){
+  const bad=!S.name||!S.phone||!subject().includes(S.name)||!subject().includes(S.phone);
+  $("dlgWarn").innerHTML=(bad?`<div class="note"><b>氏名・電話番号が空です。</b>やめて入力し直すことをおすすめします。</div>`:"")+(isOpen()?"":`<div class="note">受付開始前です。送信は開始後にしてください。</div>`);
+  $("dlg").showModal();
+}
+$("dlgNo").onclick=()=>$("dlg").close();
+$("dlgOk").onclick=()=>{$("dlg").close();location.href=mailto();if(S.step===3){S.step=4;setTimeout(renderStep,600)}};
+async function copyAll(){
+  const t=`宛先：${C.MAIL_TO}\n件名：${subject()}\n\n${body()}`;
+  try{await navigator.clipboard.writeText(t);$("cpMsg").innerHTML=`<div class="note ok">コピーしました。</div>`}
+  catch(e){$("cpMsg").innerHTML=`<div class="note">自動コピーできませんでした。下の文字を長押しでコピーしてください。<div class="pre">${esc(t)}</div></div>`}
+}
+if("serviceWorker"in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
